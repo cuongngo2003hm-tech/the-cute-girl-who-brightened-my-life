@@ -501,15 +501,51 @@
             hands.onResults(results => {
                 ctx.clearRect(0,0,100,75); ctx.drawImage(results.image, 0, 0, 100, 75);
 
-                // --- Hand Logic  ---
-                if (results.multiHandLandmarks.length === 2) {
-                    const h1 = results.multiHandLandmarks[0]; const h2 = results.multiHandLandmarks[1];
-                    const distIndex = Math.hypot(h1[8].x - h2[8].x, h1[8].y - h2[8].y);
-                    const distThumb = Math.hypot(h1[4].x - h2[4].x, h1[4].y - h2[4].y);
-                    if (distIndex < 0.15 && distThumb < 0.15) {
-                        state = 'HEART'; return;
-                    }
-                }
+                // --- Hand Logic NEW (Heart Detection Stabilized) ---
+if (results.multiHandLandmarks.length === 2) {
+
+    const h1 = results.multiHandLandmarks[0];
+    const h2 = results.multiHandLandmarks[1];
+
+    // Heart = index tips + thumb tips close together
+    const indexDist = Math.hypot(h1[8].x - h2[8].x, h1[8].y - h2[8].y);
+    const thumbDist = Math.hypot(h1[4].x - h2[4].x, h1[4].y - h2[4].y);
+
+    // VERY STRICT → tránh bị false trigger
+    if (indexDist < 0.08 && thumbDist < 0.08) {
+        state = "HEART";
+        return; 
+    }
+}
+
+if (results.multiHandLandmarks.length > 0) {
+
+    const lm = results.multiHandLandmarks[0];
+    handX = lm[9].x;
+
+    const tips = [8, 12, 16, 20];
+    const wrist = lm[0];
+
+    // Open hand detect
+    let openDist = 0;
+    tips.forEach(i => openDist += Math.hypot(lm[i].x - wrist.x, lm[i].y - wrist.y));
+    const avgDist = openDist / 4;
+
+    // Pinch detect
+    const pinchDist = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
+
+    if (avgDist < 0.23) {
+        state = "TREE";
+    } else if (pinchDist < 0.05) {
+        state = "PHOTO";
+    } else {
+        state = "EXPLODE";
+    }
+
+} else {
+    state = "TREE";
+}
+
 
                 if(results.multiHandLandmarks.length > 0) {
                     const lm = results.multiHandLandmarks[0];
